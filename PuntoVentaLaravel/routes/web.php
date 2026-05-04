@@ -22,3 +22,11 @@ Route::post('/products',       [ProductController::class, 'store'])->name('produ
 Route::get('/sales',        [SaleController::class, 'index'])->name('sales.index');
 Route::get('/sales/create', [SaleController::class, 'create'])->name('sales.create');
 Route::post('/sales',       [SaleController::class, 'store'])->name('sales.store');
+
+// Anulación de ventas — POST con formulario HTML (sin necesidad de JavaScript)
+Route::post('/sales/{saleId}/void', [SaleController::class, 'void'])->name('sales.void');
+
+// Facturación — Descarga de documentos legales
+Route::get('/invoices/{saleId}/pdf', [\App\Http\Controllers\InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+Route::get('/invoices/{saleId}/xml', [\App\Http\Controllers\InvoiceController::class, 'downloadXml'])->name('invoices.xml');
+

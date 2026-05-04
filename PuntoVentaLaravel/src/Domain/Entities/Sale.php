@@ -49,4 +49,34 @@ class Sale
     {
         return abs($this->total - $this->calculateExpectedTotal()) < 0.01;
     }
+
+    // --- Status query methods (Voiding Process) ---
+
+    /**
+     * StatusId = 1 significa Completada en la tabla SaleStatuses.
+     */
+    public function isCompleted(): bool
+    {
+        return $this->statusId === 1;
+    }
+
+    /**
+     * StatusId = 0 significa Anulada en la tabla SaleStatuses.
+     */
+    public function isVoided(): bool
+    {
+        return $this->statusId === 0;
+    }
+
+    /**
+     * Restricción temporal opcional: verifica que la venta fue registrada el mismo día calendario.
+     * Útil para sistemas que no permiten anulaciones de días anteriores (cierre de caja).
+     */
+    public function wasRegisteredOnSameCalendarDay(): bool
+    {
+        $todayAtMidnight    = new DateTimeImmutable('today midnight');
+        $saleDateAtMidnight = $this->saleDate->setTime(0, 0, 0);
+
+        return $saleDateAtMidnight >= $todayAtMidnight;
+    }
 }

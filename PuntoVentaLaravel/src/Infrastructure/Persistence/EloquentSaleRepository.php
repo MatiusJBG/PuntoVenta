@@ -9,6 +9,7 @@ use Domain\Entities\Sale;
 use Domain\Entities\SaleDetail;
 use Domain\Repositories\SaleRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use Infrastructure\Persistence\Eloquent\ProductModel;
 use Infrastructure\Persistence\Eloquent\SaleDetailModel;
 use Infrastructure\Persistence\Eloquent\SaleModel;
 
@@ -74,6 +75,53 @@ class EloquentSaleRepository implements SaleRepositoryInterface
         return $maximumCurrentId !== null ? (int) $maximumCurrentId + 1 : 1;
     }
 
+    /**
+     * Operación atómica de anulación de venta.
+     *
+     * Paso 1 — Restore Stock : increment() genera un UPDATE atómico en MySQL,
+     *                          evita race conditions y respeta el constraint de stock.
+     * Paso 2 — Update Status : Cambia StatusId → 0 (Anulada).
+     *
+     * Si cualquier paso lanza una excepción, DB::transaction() hace ROLLBACK.
+     */
+    public function voidSaleWithStockRestoration(Sale $saleToVoid): void
+    {
+        DB::transaction(function () use ($saleToVoid): void {
+            $this->restoreStockForEachSaleDetailItem($saleToVoid->getSaleDetails());
+            $this->markSaleStatusAsVoided($saleToVoid->getSaleId());
+        });
+    }
+
+    // ── Private persistence helpers ───────────────────────────────────────────
+
+    /**
+     * Restaura el stock iterando cada SaleDetail de la venta.
+     * Responsabilidad Única: solo devuelve inventario, no toca el estado de la venta.
+     *
+     * @param SaleDetail[] $saleDetailItems
+     */
+    private function restoreStockForEachSaleDetailItem(array $saleDetailItems): void
+    {
+        foreach ($saleDetailItems as $saleDetailItem) {
+            $productToRestore = ProductModel::findOrFail($saleDetailItem->getProductId());
+
+            // UPDATE Products SET Stock = Stock + N — atómico en MySQL.
+            $productToRestore->increment('Stock', $saleDetailItem->getQuantity());
+        }
+    }
+
+    /**
+     * Actualiza el StatusId de la cabecera a 0 (Anulada).
+     * Responsabilidad Única: solo cambia el estado, no toca el inventario.
+     */
+    private function markSaleStatusAsVoided(int $saleId): void
+    {
+        SaleModel::where('SaleId', $saleId)
+            ->update(['StatusId' => 0]);
+    }
+
+    // ── Mapping ───────────────────────────────────────────────────────────────
+
     private function mapModelToEntity(SaleModel $saleModel): Sale
     {
         $saleDetailEntities = $saleModel->saleDetails
@@ -86,8 +134,7 @@ class EloquentSaleRepository implements SaleRepositoryInterface
             ))
             ->all();
 
-        // PHP 8.2 no permite unpacking posicional después de named arguments.
-        // Se invocan los argumentos en orden posicional para permitir el spread variádico.
+        // PHP 8.2: no permite spread posicional después de named arguments.
         return new Sale(
             (int) $saleModel->SaleId,
             (int) $saleModel->CustomerId,

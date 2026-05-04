@@ -1,59 +1,100 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full bg-zinc-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PuntoVenta — @yield('title', 'Sistema')</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: monospace; font-size: 14px; background: #f5f5f5; color: #111; }
-        nav { background: #111; padding: 10px 20px; display: flex; gap: 20px; }
-        nav a { color: #ccc; text-decoration: none; }
-        nav a:hover { color: #fff; }
-        nav a.active { color: #fff; font-weight: bold; border-bottom: 1px solid #fff; }
-        main { padding: 24px; max-width: 1100px; margin: 0 auto; }
-        h1 { font-size: 18px; margin-bottom: 16px; border-bottom: 1px solid #ccc; padding-bottom: 6px; }
-        table { width: 100%; border-collapse: collapse; background: #fff; }
-        th, td { border: 1px solid #ddd; padding: 7px 10px; text-align: left; }
-        th { background: #eee; }
-        tr:hover { background: #fafafa; }
-        .btn { display: inline-block; padding: 6px 14px; border: 1px solid #555; background: #fff;
-               text-decoration: none; color: #111; cursor: pointer; font-family: monospace; font-size: 13px; }
-        .btn:hover { background: #eee; }
-        .btn-primary { background: #111; color: #fff; border-color: #111; }
-        .btn-primary:hover { background: #333; }
-        form label { display: block; margin-top: 12px; font-size: 12px; text-transform: uppercase; color: #555; }
-        form input, form select { width: 100%; padding: 6px 8px; border: 1px solid #bbb;
-                                   font-family: monospace; font-size: 14px; margin-top: 4px; }
-        .alert-success { background: #dff0d8; border: 1px solid #b2dfdb; padding: 10px; margin-bottom: 14px; color: #2e7d32; }
-        .alert-error   { background: #fdecea; border: 1px solid #f5c6cb; padding: 10px; margin-bottom: 14px; color: #c62828; }
-        .actions { margin-bottom: 14px; }
-    </style>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Vite Assets -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    @stack('styles')
 </head>
-<body>
+<body class="h-full antialiased text-slate-800 font-sans">
 
-<nav>
-    <a href="{{ route('sales.index') }}"     @class(['active' => request()->routeIs('sales.*')])>Ventas</a>
-    <a href="{{ route('customers.index') }}" @class(['active' => request()->routeIs('customers.*')])>Clientes</a>
-    <a href="{{ route('products.index') }}"  @class(['active' => request()->routeIs('products.*')])>Productos</a>
-</nav>
-
-<main>
-    @if(session('success'))
-        <div class="alert-success">{{ session('success') }}</div>
-    @endif
-
-    @if($errors->any())
-        <div class="alert-error">
-            @foreach($errors->all() as $error)
-                <div>{{ $error }}</div>
-            @endforeach
+    <!-- Navbar -->
+    <nav class="bg-slate-900 border-b border-slate-800 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 justify-between">
+                <div class="flex">
+                    <div class="flex flex-shrink-0 items-center">
+                        <span class="text-white font-bold text-xl tracking-tight">PuntoVenta</span>
+                    </div>
+                    <div class="hidden sm:-my-px sm:ml-8 sm:flex sm:space-x-8">
+                        <a href="{{ route('sales.index') }}" 
+                           class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200
+                                  {{ request()->routeIs('sales.*') ? 'border-emerald-500 text-white' : 'border-transparent text-slate-300 hover:text-white hover:border-slate-300' }}">
+                            Ventas
+                        </a>
+                        <a href="{{ route('customers.index') }}" 
+                           class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200
+                                  {{ request()->routeIs('customers.*') ? 'border-emerald-500 text-white' : 'border-transparent text-slate-300 hover:text-white hover:border-slate-300' }}">
+                            Clientes
+                        </a>
+                        <a href="{{ route('products.index') }}" 
+                           class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200
+                                  {{ request()->routeIs('products.*') ? 'border-emerald-500 text-white' : 'border-transparent text-slate-300 hover:text-white hover:border-slate-300' }}">
+                            Productos
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-    @endif
+    </nav>
 
-    @yield('content')
-</main>
+    <!-- Header / Breadcrumbs -->
+    <header class="bg-white shadow-sm border-b border-zinc-200">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <h1 class="text-2xl font-semibold leading-tight text-slate-900">
+                @yield('header_title', 'Dashboard')
+            </h1>
+        </div>
+    </header>
 
-@stack('scripts')
+    <!-- Main Content -->
+    <main class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            @yield('content')
+        </div>
+    </main>
+
+    <!-- Toast Notifications (SweetAlert2) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const Toast = window.Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', window.Swal.stopTimer)
+                    toast.addEventListener('mouseleave', window.Swal.resumeTimer)
+                }
+            });
+
+            @if(session('success'))
+                Toast.fire({
+                    icon: 'success',
+                    title: "{!! addslashes(session('success')) !!}"
+                });
+            @endif
+
+            @if($errors->any())
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Por favor, corrija los errores.',
+                    text: "{!! addslashes($errors->first()) !!}"
+                });
+            @endif
+        });
+    </script>
+
+    @stack('scripts')
 </body>
 </html>

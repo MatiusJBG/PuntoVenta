@@ -9,6 +9,8 @@ use Application\DTOs\SaleItemDTO;
 use Application\UseCases\ListProductsUseCase;
 use Application\UseCases\ListSalesUseCase;
 use Application\UseCases\RegisterSaleUseCase;
+use Application\UseCases\Sales\VoidSaleUseCase;
+use Domain\Exceptions\SaleAlreadyVoidedException;
 use Infrastructure\Persistence\Eloquent\CustomerModel;
 use Infrastructure\Persistence\Eloquent\PaymentMethodModel;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +23,7 @@ class SaleController extends Controller
         private readonly ListSalesUseCase    $listSalesUseCase,
         private readonly RegisterSaleUseCase $registerSaleUseCase,
         private readonly ListProductsUseCase $listProductsUseCase,
+        private readonly VoidSaleUseCase     $voidSaleUseCase,
     ) {}
 
     public function index(): View
@@ -42,12 +45,12 @@ class SaleController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validatedData = $request->validate([
-            'customerId'       => 'required|integer',
-            'paymentMethodId'  => 'required|integer',
-            'items'            => 'required|array|min:1',
-            'items.*.productId'=> 'required|integer',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unitPrice'=> 'required|numeric|min:0.01',
+            'customerId'        => 'required|integer',
+            'paymentMethodId'   => 'required|integer',
+            'items'             => 'required|array|min:1',
+            'items.*.productId' => 'required|integer',
+            'items.*.quantity'  => 'required|integer|min:1',
+            'items.*.unitPrice' => 'required|numeric|min:0.01',
         ]);
 
         try {
@@ -73,6 +76,26 @@ class SaleController extends Controller
         } catch (\DomainException $domainException) {
             return redirect()->back()
                 ->withInput()
+                ->withErrors(['domain' => $domainException->getMessage()]);
+        }
+    }
+
+    /**
+     * Anula una venta completada y restaura el stock de los productos involucrados.
+     * Es un despachador puro: delega toda la lógica al VoidSaleUseCase.
+     */
+    public function void(int $saleId): RedirectResponse
+    {
+        try {
+            $this->voidSaleUseCase->execute($saleId);
+
+            return redirect()->route('sales.index')
+                ->with('success', "Venta #{$saleId} anulada. El stock de los productos ha sido restaurado.");
+        } catch (SaleAlreadyVoidedException $domainException) {
+            return redirect()->route('sales.index')
+                ->withErrors(['domain' => $domainException->getMessage()]);
+        } catch (\DomainException $domainException) {
+            return redirect()->route('sales.index')
                 ->withErrors(['domain' => $domainException->getMessage()]);
         }
     }
